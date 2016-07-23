@@ -5,6 +5,7 @@ from flask import Flask, g, render_template, send_from_directory, session, reque
 import os
 import os.path
 
+from flask_httpauth import HTTPBasicAuth
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import redirect
 
@@ -37,7 +38,9 @@ from app.ym_dishes.models import YMDish
 from app.favorite_dishes.models import FavoriteDish
 from app.like_dishes.models import LikeDish
 from app.ym_dish_comments.models import YMDishComment
-db.create_all()
+
+auth = HTTPBasicAuth()
+
 
 
 # *****************
