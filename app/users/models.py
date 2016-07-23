@@ -6,7 +6,7 @@ from collections import Counter
 class User(db.Model):
     __tablename__='_user'
     UserName=db.Column(db.String(20),primary_key=True)
-    Password=db.Column(db.String(20))
+    Password=db.Column(db.String(128))
     HeadImage=db.Column(db.String(200))
     Email=db.Column(db.String(20))
     EmailVerified=db.Column(db.Boolean)
