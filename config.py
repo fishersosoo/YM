@@ -15,5 +15,5 @@ CSRF_SESSION_KEY = SECRET_KEY
 DB_USER = 'root'
 DB_PASSWORD = '1995'
 DB_URI = 'localhost:3306/ym'
-PER_PAGE=10
+PER_PAGE=2
 SQLALCHEMY_DATABASE_URI = 'mysql://' + DB_USER + ':' + DB_PASSWORD + '@' + DB_URI+'?charset=utf8'

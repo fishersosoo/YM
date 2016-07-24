@@ -6,15 +6,32 @@
         <li><a href="/users/register/" >注册</a></li>
         <li><a href="/users/login/" >登录</a></li>
 {% endblock %}
+      {% block extendscript %}
+      <script src="/static/js/test.js"></script>
+      {% endblock extendscript %}
 {% block content %}
 <div class="container">
 <div class="jumbotron">
-  <h1>教育研究院专家征集系统</h1>
-  <p>进行下一步操作请进行注册或登录</p>
+  <h1>YM系统用户接口测试</h1>
+  <p>按下面测试</p>
   <p>
-      <a class="btn btn-primary btn-lg" href="/users/register/" role="button">注册</a>
-      <a class="btn btn-primary btn-lg" href="/users/login/" role="button">登录</a>
+      <Button class="btn btn-primary btn-lg" id="TestRegister" role="button">测试注册</Button>
+      <Button class="btn btn-primary btn-lg" id="TestLogin" role="button">测试登录</Button>
+      <Button class="btn btn-primary btn-lg" id="TestFoodList" role="button">测试当日菜式</Button>
+      <Button class="btn btn-primary btn-lg" id="TestCommentList" role="button">测试获取评论</Button>
+      <Button class="btn btn-primary btn-lg" id="TestComment" role="button">测试发布评论</Button>
+      <Button class="btn btn-primary btn-lg" id="TestLikeList" role="button">测试获取点赞</Button>
+      <Button class="btn btn-primary btn-lg" id="TestDontLike" role="button">测试取消点赞</Button>
+      <Button class="btn btn-primary btn-lg" id="TestFavoriteList" role="button">测试获取收藏</Button>
+      <p></p>
+      <Button class="btn btn-primary btn-lg" id="TestUserInfo" role="button">获取用户信息</Button>
+      <Button class="btn btn-primary btn-lg" id="TestEditInfo" role="button">修改用户信息</Button>
+      <Button class="btn btn-primary btn-lg" id="TestEditPassword" role="button">修改密码</Button>
+      <Button class="btn btn-primary btn-lg" id="TestLike" role="button">测试点赞</Button>
+      <Button class="btn btn-primary btn-lg" id="TestFavorite" role="button">测试收藏</Button>
+      <Button class="btn btn-primary btn-lg" id="TestDontFavorite" role="button">测试取消收藏</Button>
   </p>
 </div>
 </div>
+<p id="data">data</p>
 {% endblock %}

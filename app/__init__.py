@@ -33,11 +33,9 @@ app.register_blueprint(favorite_dishesModule,url_prefix='/favorite_dishes')
 app.register_blueprint(like_dishesModule,url_prefix='/like_dishes')
 app.register_blueprint(ym_dish_commentsModule,url_prefix='/ym_dish_comments')
 app.register_blueprint(ym_dishesModule,url_prefix='/ym_dishes')
-from app.users.models import User
-from app.ym_dishes.models import YMDish
-from app.favorite_dishes.models import FavoriteDish
-from app.like_dishes.models import LikeDish
-from app.ym_dish_comments.models import YMDishComment
+
+
+
 
 auth = HTTPBasicAuth()
 
@@ -60,6 +58,6 @@ def page_not_found(e):
 
 @app.route("/")
 def index():
-    return 1
+    return render_template('index.html')
 
 

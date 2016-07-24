@@ -683,4 +683,20 @@ function CheckIsEmpty(id,form_id,words)
 				}
 			})
 	})
+	$("#TestRegister").on('click',function(){
+	alert()
+	$.post('/users/Register',
+	{
+		"UserName":'test_user',
+		'Password':'123456',
+		'Email':'test@test.com',
+		'Birthday':'1995-12-12',
+		'NickName':'TestNick',
+		'Gender':1,
+		'HomeTown':'testHomeTown',
+		'MobilePhoneNumber':'10086'
+	},function(data,status)
+	{
+		alert()
+	})
 });
