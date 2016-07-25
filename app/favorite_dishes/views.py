@@ -6,7 +6,6 @@ import json
 import types
 from datetime import time
 import time
-from sqlite3 import IntegrityError
 
 from flask_bootstrap import Bootstrap
 from flask import Blueprint, render_template, flash, redirect, session, url_for, request, g, make_response
