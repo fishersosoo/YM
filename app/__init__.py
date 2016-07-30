@@ -57,6 +57,6 @@ def page_not_found(e):
 
 @app.route("/")
 def index():
-    return 1
+    return render_template('index.html')
 
 
