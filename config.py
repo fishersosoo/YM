@@ -13,7 +13,7 @@ PERMANENT_SESSION_LIFETIME = timedelta(seconds=24 * 60 * 60)
 CSRF_ENABLED = True
 CSRF_SESSION_KEY = SECRET_KEY
 DB_USER = 'root'
-DB_PASSWORD = '1995'
+DB_PASSWORD = 'nicai@690!?'
 DB_URI = 'localhost:3306/ym'
 PER_PAGE=2
 SQLALCHEMY_DATABASE_URI = 'mysql://' + DB_USER + ':' + DB_PASSWORD + '@' + DB_URI+'?charset=utf8'

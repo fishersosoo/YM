@@ -12,6 +12,7 @@ from flask_bootstrap import Bootstrap
 from flask import Blueprint, render_template, flash, redirect, session, url_for, request, g, make_response
 from flask_login import login_user, logout_user, login_required, current_user
 from app import app, db, users
+<<<<<<< HEAD
 from app.users.models import User
 
 mod = Blueprint('users', __name__)
@@ -64,6 +65,9 @@ def Login():
         else:
             return json.dumps({'message': 'Password is wrong!'})
 
+=======
+from app.users.models import Admin
+>>>>>>> origin/manage
 
 @mod.route('/getUserInfo', methods=('GET', 'POST'))
 def GetUserInfo():
@@ -119,6 +123,7 @@ def EditUserInfo():
         user.save()
         return json.dumps({'message':'Modify Succeed!'})
 
+<<<<<<< HEAD
 @mod.route('/changePassword', methods=('GET', 'POST'))
 def ChangePassword():
     if request.method=='GET':
@@ -134,3 +139,17 @@ def ChangePassword():
             return json.dumps({'message': 'Change Succeed!'})
         else:
             return json.dumps({'message': 'Password is wrong!'})
+=======
+@mod.route('/adminLogin',methods=['GET','POST'])
+def adminLogin():
+    if request.method=='GET':
+    	return json.dumps({'message':'Please use method POST!'})
+    if request.method=='POST':
+    	admin=Admin.query.filter(Admin.AdminName == request.values.get('AdminName')).first()
+    	if admin == None:
+    		return json.dumps({'message':'AdminName does not exist!'})
+    	if admin.verify_password(request.values.get('Password')):
+    		return json.dumps({'message':'Login Success!','token':admin.generate_auth_token()})
+    	else:
+    		return json.dumps({'message':'Password is wrong!'})
+>>>>>>> origin/manage
