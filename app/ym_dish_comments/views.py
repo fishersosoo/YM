@@ -53,6 +53,38 @@ def GetCommentList():
 						,'PageNum':str(PageNum)
 						,'comment_list':json.dumps(List)})
 
+@mod.route('/adminGetCommentList',methods=('GET', 'POST'))
+def adminGetCommentList():
+	if request.method=='GET':
+		return json.dumps({'message':'Please use method POST!'})
+	if request.method=='POST':
+		List=[]
+		page=request.values.get('page')
+		if page is None:
+			i_page=1
+		else:
+			i_page=int(page)
+
+		if request.values.get('DishID') is None:
+			return json.dumps({'message':'Need DishID!'})
+
+		if YMDish.query.filter(YMDish.DishID==request.values.get('DishID')).first() is None:
+			return json.dumps({'message':'DishID is invalid!'})
+
+		comments=YMDishComment.query.filter(YMDishComment.DishID==request.values.get('DishID')).paginate(i_page,PER_PAGE,False).items
+		PageNum=YMDishComment.query.filter(YMDishComment.DishID==request.values.get('DishID')).paginate(i_page,PER_PAGE,False).pages
+		
+		if len(comments) == 0:
+			return json.dumps({'message':'Page is out of range!'})
+
+		for one in comments:
+			List.append({'Time':str(one.Time)
+						,'Content':one.Content
+						,'NickName':User.query.filter(User.UserName==one.UserName).first().NickName
+						,'UserName':one.UserName})
+		return json.dumps({'CurrentPage':str(i_page)
+						,'PageNum':str(PageNum)
+						,'comment_list':json.dumps(List)})
 
 @mod.route('/adminDeleteComment',methods=['GET','POST'])
 def adminDeleteComment():
