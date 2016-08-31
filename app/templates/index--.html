@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+{% import "bootstrap/fixes.html" as fixes %}
+{% import "bootstrap/utils.html" as util %}
+{% block navbar %}
+        <li><a href="/users/register/" >注册</a></li>
+        <li><a href="/users/login/" >登录</a></li>
+{% endblock %}
+{% block content %}
+	{% block extendscript %}
+    <script src="/static/js/admintest.js"></script>
+    {% endblock extendscript %}
+<div class="container">
+<div class="jumbotron">
+  <h1>YM饭堂信息推送系统管理端</h1>
+  <p>请点击以下按钮进行各个功能测试</p>
+  <p>
+	<Button class="btn btn-primary btn-lg" id="adminTestLogin" role="button">测试登录</Button>
+	<Button class="btn btn-primary btn-lg" id="TestAllDish" role="button">查看所有菜式</Button>
+	<Button class="btn btn-primary btn-lg" id="TestEditDish" role="button">修改某个菜式</Button>
+	<Button class="btn btn-primary btn-lg" id="TestAddDish" role="button">添加菜式</Button>
+	<Button class="btn btn-primary btn-lg" id="TestDelDish" role="button">删除菜式</Button>
+	<Button class="btn btn-primary btn-lg" id="TestTodayDish" role="button">查看今日菜式</Button>
+	<Button class="btn btn-primary btn-lg" id="TestAddToday" role="button">增加今日菜式</Button>
+	<Button class="btn btn-primary btn-lg" id="TestDelToday" role="button">删除今日菜式</Button>
+	<Button class="btn btn-primary btn-lg" id="TestComment" role="button">查看评论</Button>
+	<Button class="btn btn-primary btn-lg" id="TestDelComment" role="button">删除评论</Button>
+  </p>
+</div>
+</div>
+<p id="data">data</p>
+{% endblock %}

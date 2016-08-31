@@ -1,32 +1,1425 @@
-{% extends "base.html" %}
-{% import "bootstrap/wtf.html" as wtf %}
-{% import "bootstrap/fixes.html" as fixes %}
-{% import "bootstrap/utils.html" as util %}
-{% block navbar %}
-        <li><a href="/users/register/" >注册</a></li>
-        <li><a href="/users/login/" >登录</a></li>
-{% endblock %}
-{% block content %}
-	{% block extendscript %}
-    <script src="/static/js/admintest.js"></script>
-    {% endblock extendscript %}
-<div class="container">
-<div class="jumbotron">
-  <h1>YM饭堂信息推送系统管理端</h1>
-  <p>请点击以下按钮进行各个功能测试</p>
-  <p>
-	<Button class="btn btn-primary btn-lg" id="adminTestLogin" role="button">测试登录</Button>
-	<Button class="btn btn-primary btn-lg" id="TestAllDish" role="button">查看所有菜式</Button>
-	<Button class="btn btn-primary btn-lg" id="TestEditDish" role="button">修改某个菜式</Button>
-	<Button class="btn btn-primary btn-lg" id="TestAddDish" role="button">添加菜式</Button>
-	<Button class="btn btn-primary btn-lg" id="TestDelDish" role="button">删除菜式</Button>
-	<Button class="btn btn-primary btn-lg" id="TestTodayDish" role="button">查看今日菜式</Button>
-	<Button class="btn btn-primary btn-lg" id="TestAddToday" role="button">增加今日菜式</Button>
-	<Button class="btn btn-primary btn-lg" id="TestDelToday" role="button">删除今日菜式</Button>
-	<Button class="btn btn-primary btn-lg" id="TestComment" role="button">查看评论</Button>
-	<Button class="btn btn-primary btn-lg" id="TestDelComment" role="button">删除评论</Button>
-  </p>
+<!DOCTYPE html>
+<html>
+<head>
+   <meta charset="utf-8"> 
+   <title>check</title>
+   <style type="text/css">
+   	h3,table,ul{
+   		font-family: "微软雅黑";
+   	}
+   </style>
+   <link rel="stylesheet" href="http://apps.bdimg.com/libs/bootstrap/3.3.0/css/bootstrap.min.css">  
+   <script src="http://apps.bdimg.com/libs/jquery/2.1.1/jquery.min.js"></script>
+   <script src="http://apps.bdimg.com/libs/bootstrap/3.3.0/js/bootstrap.min.js"></script>
+
+
+   <script type="text/javascript">
+   	var token = '';//令牌
+   	var menuCurPage = 1;//菜单当前页数
+   	var todayDishCurPage = 1;//今日菜式当前页数
+   	var usrCmdCurPage = 1;//用户评论当前页数
+   	var maxMenuPage = 1;//菜单页面的做大页数
+   	var maxTodayDishPage = 1;//今日菜式页面的最大页数
+   	var maxUsrCmdPage = 1;//用户评论最大页数
+   	var checkDishID = 0;//当前查询的菜式ID
+   	//修改操作按钮的样式
+   	function choseOperation(obj){
+   		var btn = obj.parentNode.parentNode.parentNode.childNodes[0];//按钮
+   		var btnC = obj.parentNode.parentNode.parentNode.childNodes[2];//下拉框
+   		btn.innerHTML = obj.innerHTML;
+   		if(obj.innerHTML == 'Edit'){
+   			btn.className = 'btn btn-primary';
+   			btnC.className = 'btn btn-primary dropdown-toggle';
+   			btn.attributes['data-target'].nodeValue = btn.attributes['data-target'].nodeValue.substr(1);
+   		}
+   		else if(obj.innerHTML == 'Delete'){
+   			btn.className = 'btn btn-danger';
+   			btnC.className = 'btn btn-danger dropdown-toggle';
+   			btn.attributes['data-target'].nodeValue = 'k' + btn.attributes['data-target'].nodeValue;
+   		}
+   	}
+
+   	//切换页面
+   	function switchPage(obj){
+   	 	var ul = obj.parentNode.parentNode;
+   	 	var menu = ul.childNodes[1];	
+   	 	menu.className = '';
+   	 	document.getElementById('menu').style.display = 'none';
+   	 	var todayDish = ul.childNodes[3];	
+   	 	todayDish.className = '';
+   	 	document.getElementById('todayDish').style.display = 'none';
+   	 	var commend = ul.childNodes[5];	
+   	 	commend.className = '';
+   	 	document.getElementById('commend').style.display = 'none';
+   	 	if(obj.innerHTML == '菜单'){
+   	 		menu.className = 'active';
+   	 		document.getElementById('menu').style.display = 'block';
+   	 		//需要动态加载页面内容
+            loadMenuPage(1);
+            setActive(1,'menuPageFlip');
+            menuCurPage = 1;
+   	 	}
+   	 	else if(obj.innerHTML =='今日菜式'){
+   	 		todayDish.className = 'active';
+   	 		document.getElementById('todayDish').style.display = 'block';
+   	 		//需要动态加载页面内容
+            loadTodayDishPage(1);
+            setActive(1,'todayDishPageFlip');
+            todayDishCurPage = 1;
+   	 	}
+   	 	else if(obj.innerHTML =='用户评论'){
+   	 		commend.className = 'active';
+   	 		document.getElementById('commend').style.display = 'block';
+   	 		//需要动态加载页面内容
+            getUsrCommend();
+   	 	}
+   	}
+
+   	//G菜单列表——edit/delete操作删除的时候，服务器返回的json格式的数据提示出错
+   	function menuOperation(obj){
+   		if(obj.innerHTML == 'Delete'){
+   			var dishIDObject = obj.parentNode.parentNode.parentNode.childNodes[0];
+   			var dishID = dishIDObject.innerHTML;
+   			//删除操作
+   			//向服务器发送删除请求!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   			//删除成功才开始调整页面内容!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   			var xmlhttp = new XMLHttpRequest();
+   			xmlhttp.onreadystatechange = function(){
+   				var jsonData = JSON.parse(xmlhttp.responseText);
+   				if(jsonData.message == 'Delete Dish Succeed!'){
+   					//重新加载当前页面
+   					//假如当前页面比最大页面还大
+                  setActive(1,'menuPageFlip');
+                  menuCurPage = 1;
+   					loadMenuPage(1);
+   				}
+   				else{
+   					alert(jsonData.message);
+   				}
+   			}
+
+   			xmlhttp.open('POST','ym_dishes/adminDelDish',true);
+   			xmlhttp.setRequestHeader('content-type','application/x-www-form-urlencoded');
+   			var data = 'token=' + token +
+   				'&DishID=' + dishID;
+   			xmlhttp.send(data);
+   		}
+   	}
+   	//菜式出售位置以及原料的删除
+   	function dishPosAndStuDelete(obj){
+   		obj.outerHTML = '';
+   	}
+   	//菜式出售位置以及原料的增加
+   	function dishPosAndStuAdd(obj){
+   		var str = prompt('输入信息：');
+   		if(str != null){
+   			var newData = document.createElement('button');
+   			newData.setAttribute('class','btn btn-default');
+   			newData.setAttribute('style','margin-left:10px');
+   			newData.setAttribute('onclick','dishPosAndStuDelete(this)');
+   			newData.innerHTML = str;
+   			var newDataSpan = document.createElement('span');
+   			newDataSpan.setAttribute('class','glyphicon glyphicon-remove');
+   			newData.appendChild(newDataSpan);
+   			obj.outerHTML = newData.outerHTML + obj.outerHTML;
+   		}
+   	}
+   	//F菜式内容提交更改按钮，读取菜式页面的内容
+   	function dishUpdate(obj){
+   		//菜式ID
+   		var dishIDObject = obj.parentNode.parentNode.childNodes[0].childNodes[1];
+   		//菜式内容主题
+   		var dishContentObject = obj.parentNode.parentNode.childNodes[1].childNodes[0];
+   		
+   		var dishID = dishIDObject.innerHTML.substr(6);
+   		var dishName = dishContentObject.childNodes[0].childNodes[0].childNodes[1].value;
+   		var dishPrice = dishContentObject.childNodes[1].childNodes[0].childNodes[1].value;
+   		var dishType = dishContentObject.childNodes[5].childNodes[0].childNodes[1][dishContentObject.childNodes[5].childNodes[0].childNodes[1].selectedIndex].value;
+   		var dishTaste = dishContentObject.childNodes[6].childNodes[0].childNodes[1][dishContentObject.childNodes[6].childNodes[0].childNodes[1].selectedIndex].value;
+
+   		var dishLocationsDiv = dishContentObject.childNodes[7].childNodes[0].childNodes[1];
+   		var dishLocations = new Array();
+   		for(var i = 0; i < dishLocationsDiv.childNodes.length - 1; ++i){
+   			dishLocations[i] = dishLocationsDiv.childNodes[i].innerHTML.substr(0,(dishLocationsDiv.childNodes[i].innerHTML.indexOf('<')));
+   		}
+
+   		var dishStuffDiv = dishContentObject.childNodes[8].childNodes[0].childNodes[1];
+   		var dishStuffs = new Array();
+   		for(var i = 0; i < dishStuffDiv.childNodes.length - 1; ++i){
+   			dishStuffs[i] = dishStuffDiv.childNodes[i].innerHTML.substr(0,(dishStuffDiv.childNodes[i].innerHTML.indexOf('<')))
+   		}
+
+   		//var dishSmImgLocalURL = dishContentObject.childNodes[9].childNodes[0].childNodes[2].value;//菜式小图的本地URL，可能还需要重新设置!!!!!!!!!!!!
+
+   		//var dishLgImgLocalURL = dishContentObject.childNodes[10].childNodes[0].childNodes[2].value;//菜式大图的本地URL，可能还需要重新设置!!!!!!!!!!!!
+
+   		var dishDesc = dishContentObject.childNodes[11].childNodes[1].value;
+
+   		var xmlhttp = new XMLHttpRequest();
+   		xmlhttp.onreadystatechange = function(){
+   			if(xmlhttp.readyState == 4 && xmlhttp.status == 200){
+   				var jsonData = JSON.parse(xmlhttp.responseText);
+   				if(jsonData.message == 'Modify Succeed!'){
+   					//根据curPage重新加载页面
+   					loadMenuPage(menuCurPage);
+   				}
+   				else{
+   					alert(jsonData.message);
+   				}
+   			}
+   		}
+   		xmlhttp.open('POST','ym_dishes/adminModifyDish',true);
+   		xmlhttp.setRequestHeader('content-type','application/x-www-form-urlencoded');
+   		var data = 'token=' + token + 
+   			'&DishID=' + dishID + 
+   			'&DishType=' + getDishTypeFromIntToStr(parseInt(dishType)) + 
+   			'&DishSmallImage=' + '' + 
+   			'&DishLargeImage=' + '' +
+   			'&DishName=' + dishName +
+   			'&Taste=' + getDishTasteFromIntToStr(parseInt(dishTaste)) + 
+   			'&RawStuff=' + joinEle(dishStuffs) + 
+   			'&Locations=' + joinEle(dishLocations) + 
+   			'&Description=' + dishDesc + 
+   			'&Price=' + dishPrice;
+   		xmlhttp.send(data);
+   		//向后台提交修改请求!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   	}
+   	//F增加今日菜式
+   	function addTodayDish(obj){
+   		var id = obj.parentNode.parentNode.childNodes[0].innerHTML;
+   		if(id != ''){
+   			//向服务器发送菜式的ID！！！！！！！！！！！！！！！！！！！！！！！
+   			/*在服务器响应后应该将当前的今日菜式菜单内容删除
+			document.getElementById('todayDishTable').childNodes[3].innerHTML = '';
+			重新获取今日才是内容，调用函数todayDishTemplate(data)来重新加载每一行
+   			*/
+   			var xmlhttp = new XMLHttpRequest();
+   			xmlhttp.onreadystatechange = function(){
+   				if(xmlhttp.readyState == 4 && xmlhttp.status == 200){
+   					var jsonData = JSON.parse(xmlhttp.responseText);
+   					if(jsonData.message	 == 'Modify Succeed!'){
+   						//刷新加载当前页面
+   						loadMenuPage(menuCurPage);
+   					}
+   					else{
+   						alert(jsonData.message);
+   					}
+   				}
+   			}
+
+   			xmlhttp.open('POST','ym_dishes/adminOperateTodayDish/add',true);
+   			xmlhttp.setRequestHeader('content-type','application/x-www-form-urlencoded');
+   			var data = 'token=' + token + 
+   				'&DishID=' + id;
+   			xmlhttp.send(data);
+   		}
+   	}
+
+   	function cleanUpDishEditPage(){
+   		document.getElementById('newDishID').value = '';
+   		document.getElementById('newDishName').value = '';
+   		document.getElementById('newDishPrice').value = '';
+   		var dishLocationsDiv = document.getElementById('newDishLocations');
+   		for(var i = 1; i < dishLocationsDiv.childNodes.length - 2; ++i){
+   			dishLocationsDiv.childNodes[i].outerHTML = '';
+   		}
+   		var dishStuffDiv = document.getElementById('newDishStuff');
+   		for(var i = 1; i < dishStuffDiv.childNodes.length - 2; ++i){
+   			dishStuffDiv.childNodes[i].outerHTML;
+   		}
+   		document.getElementById('newDishDesc').value = '';
+   	}
+
+   	//F增加新的菜式
+   	function addDish(obj){
+   		var dishId = document.getElementById('newDishID').value;
+   		var dishName = document.getElementById('newDishName').value;
+   		var dishPrice = document.getElementById('newDishPrice').value;
+   		var dishType = document.getElementById('newDishType')[document.getElementById('newDishType').selectedIndex].value;
+   		var dishTaste = document.getElementById('newDishTaste')[document.getElementById('newDishTaste').selectedIndex].value;
+
+   		var dishLocations = new Array();
+   		var dishLocationsDiv = document.getElementById('newDishLocations');
+   		for(var i = 1; i < dishLocationsDiv.childNodes.length - 2; ++i){
+   			dishLocations[i] = dishLocationsDiv.childNodes[i].innerHTML.substr(0,(dishLocationsDiv.childNodes[i].innerHTML.indexOf('<')));
+   		}
+
+   		var dishStuffDiv = document.getElementById('newDishStuff');
+   		var dishStuffs = new Array();
+   		for(var i = 1; i < dishStuffDiv.childNodes.length - 2; ++i){
+   			dishStuffs[i] = dishStuffDiv.childNodes[i].innerHTML.substr(0,(dishStuffDiv.childNodes[i].innerHTML.indexOf('<')));
+   		}
+
+   		//由于技术原因暂时还没有完成图片的上传功能
+   		var dishDesc = document.getElementById('newDishDesc').value;
+
+   		var xmlhttp = new XMLHttpRequest();
+   		xmlhttp.onreadystatechange = function(){
+   			if(xmlhttp.readyState == 4 && xmlhttp.status == 200){
+   				var jsonData = JSON.parse(xmlhttp.responseText);
+   				if(jsonData.message == 'Add Dish Succeed!'){
+   					//重新加载页面信息
+   					//清空编辑页面
+   					cleanUpDishEditPage();
+   					loadMenuPage(menuCurPage);
+   				}
+   				else{
+   					alert(jsonData.message);
+   				}
+   			}
+   		}
+   		xmlhttp.open('POST','ym_dishes/adminAddDish',true);
+         xmlhttp.setRequestHeader('content-type','application/x-www-form-urlencoded');
+         var data = 'token=' + token +
+            '&DishID=' + dishId +
+            '&DishType=' + getDishTypeFromIntToStr(parseInt(dishType)) +
+            '&DishSmallImage=' + '' +
+            '&DishLargeImage=' + '' +
+            '&DishName=' + dishName +
+            '&Taste=' + getDishTasteFromIntToStr(parseInt(dishTaste)) +
+            '&RawStuff=' + joinEle(dishStuffs) + 
+            '&Locations=' + joinEle(dishLocations) +
+            '&Description=' + dishDesc + 
+            '&Price=' + dishPrice;
+   		xmlhttp.send(data);
+   	}
+    //将原料/出售位置的数组融合成一个以逗号隔开的字符串
+    function joinEle(datas){
+         var str = '';
+         for(var i = 0; i < datas.length - 1; ++i){
+            str += datas[i];
+            str += ',';
+         }
+         if(datas.length >= 1){
+            str += datas[datas.length - 1];
+         }
+         return str;
+    }
+
+   	/*菜单模版——加载一个菜式,参数是返回菜单数组中的其中一个对象
+   	第二个参数number是模态框的编号，因为一个页面只能有1个id，所以每个模态框要有自己的编号
+   	最好是数组下标就可以
+	tab是整个表格的对象，调用insertRow插入新行
+   	*/
+   	function menuTemplate(data,number){
+   		var tab = document.getElementById('menuTable')
+   		var newR = tab.insertRow(tab.rows.length);//新的一行
+   		var newDishID = newR.insertCell(0);//新行的第一列
+   		var newDishName = newR.insertCell(1);
+   		var newDishType = newR.insertCell(2);
+   		var newDishTaste = newR.insertCell(3);
+   		var newAddTodayDish = newR.insertCell(4);
+   		var newDishOperate = newR.insertCell(5);
+   		
+
+   		newDishID.innerHTML = data.DishID;
+   		newDishName.innerHTML = data.DishName;
+   		newDishType.innerHTML = (data.DishType);
+   		newDishTaste.innerHTML = (data.Taste);
+
+   		//添加今日菜式的按钮
+   		var todayDishAddBtn = document.createElement('button');
+   		var todayDishAddSpan = document.createElement('span');
+   		todayDishAddBtn.setAttribute('type','button');
+   		todayDishAddBtn.setAttribute('onclick','addTodayDish(this)');
+   		if(data.IsToday == '1'){
+   			todayDishAddBtn.setAttribute('disabled','disabled');
+   		}
+   		todayDishAddBtn.setAttribute('class','btn btn-primary');
+   		todayDishAddSpan.setAttribute('class','glyphicon glyphicon-star');
+   		newAddTodayDish.appendChild(todayDishAddBtn);
+   		todayDishAddBtn.appendChild(todayDishAddSpan);
+
+   		//添加按钮还有他的模态对话框
+   		var divBtn_group = document.createElement('div');//这是包括按钮在内的模态框的DIV
+   		divBtn_group.setAttribute('class','btn-group');
+   		newDishOperate.appendChild(divBtn_group);
+
+   		var btnOperate = document.createElement('button');//这是激活模态框的按钮
+   		btnOperate.setAttribute('type','button');
+   		btnOperate.setAttribute('class','btn btn-primary');
+   		btnOperate.setAttribute('data-toggle',('modal'));
+   		btnOperate.setAttribute('data-target',('#modal' + number));
+   		btnOperate.setAttribute('style','width:80px');
+   		btnOperate.setAttribute('onclick','menuOperation(this)');
+   		btnOperate.innerHTML = 'Edit';
+
+   		divBtn_group.appendChild(btnOperate);
+
+   		var modalFrame = document.createElement('div');//这是包裹模态对话框的DIV
+   		modalFrame.setAttribute('class','modal fade');
+   		modalFrame.setAttribute('id',('modal' + number));
+   		modalFrame.setAttribute('tabindex','-1');
+   		modalFrame.setAttribute('role','dialog');
+   		modalFrame.setAttribute('aria-labelledby',('myModalLabel' + number));
+   		modalFrame.setAttribute('aria-hidden','true');
+
+   		divBtn_group.appendChild(modalFrame);
+
+   		var modalDialog = document.createElement('div');//这是模态框的第二层div
+   		modalDialog.setAttribute('class','modal-dialog');
+
+   		modalFrame.appendChild(modalDialog);
+
+   		var modalContent = document.createElement('div');//模态框第三层
+   		modalContent.setAttribute('class','modal-content');
+
+   		modalDialog.appendChild(modalContent);
+
+   		var modalHeader = document.createElement('div');//模态框的头部
+   		modalHeader.setAttribute('class','modal-header');
+   		modalContent.appendChild(modalHeader);
+
+   		var headerBtn = document.createElement('button');//模态框头部关闭按钮
+   		headerBtn.setAttribute('type','button');
+   		headerBtn.setAttribute('class','close');
+   		headerBtn.setAttribute('data-dismiss','modal');
+   		headerBtn.setAttribute('aria-hidden','true');
+   		headerBtn.innerHTML = '&times;';
+
+   		modalHeader.appendChild(headerBtn);
+
+   		var dishID = document.createElement('h4');//菜式ID
+   		dishID.setAttribute('class','modal-title');
+   		dishID.setAttribute('id',('myModalLabel' + number));
+   		dishID.innerHTML = '菜式ID: ' + data.DishID;
+   		modalHeader.appendChild(dishID);
+
+   		var modalBody = document.createElement('div');//模态框的中部内容
+
+   		modalBody.setAttribute('class','modal-body');
+
+   		modalContent.appendChild(modalBody);
+
+   		var listGroup = document.createElement('ul');//内容列表容器
+   		listGroup.setAttribute('class','list-group');
+   		modalBody.appendChild(listGroup);
+
+   		var spanName = new Array();//内容列表项目名称数组
+   		spanName[0] = '菜式名称';
+   		spanName[1] = '菜式价格';
+   		spanName[2] = '点赞次数';
+   		spanName[3] = '收藏次数';
+   		spanName[4] = '今日菜式';
+   		spanName[5] = '菜式类型';
+   		spanName[6] = '菜式口味';
+   		spanName[7] = '出售位置';
+   		spanName[8] = '菜式原料';
+   		spanName[9] = '菜式小图';
+   		spanName[10] = '菜式大图';
+
+   		var liGroup = new Array();//每行的li标签
+   		for(var i = 0; i < 12; ++i){
+   			liGroup[i] = document.createElement('li');
+   			liGroup[i].setAttribute('class','list-group-item');
+   			listGroup.appendChild(liGroup[i]);
+   		}
+
+   		var divInputGroup = new Array();//每个标签里面的div块
+   		for(var i = 0; i < 11; ++i){
+   			divInputGroup[i] = document.createElement('div');
+   			divInputGroup[i].setAttribute('class','input-group');
+   			liGroup[i].appendChild(divInputGroup[i]);
+   			var span = document.createElement('span');
+   			span.setAttribute('class','input-group-addon');
+   			span.innerHTML = spanName[i];
+   			divInputGroup[i].appendChild(span);
+   		}
+
+   		var listInputGroupData = new Array();//前面四个输入框的数值
+   		listInputGroupData[0] = data.DishName;
+   		listInputGroupData[1] = data.Price;
+   		listInputGroupData[2] = data.Like;
+   		listInputGroupData[3] = data.Favorite;
+
+   		var listInputGroup = new Array();//前面四行的输入框
+   		for(var i = 0; i < 4; ++i){
+   			listInputGroup[i] = document.createElement('input');
+   			listInputGroup[i].setAttribute('type','text');
+   			listInputGroup[i].setAttribute('class','form-control');
+   			listInputGroup[i].setAttribute('value',listInputGroupData[i]);
+   			divInputGroup[i].appendChild(listInputGroup[i]);
+   		}
+   		listInputGroup[2].setAttribute('disabled','disabled');
+   		listInputGroup[3].setAttribute('disabled','disabled');
+
+   		var selectGroup = new Array();//选择框
+   		for(var i = 0; i < 3; ++i){
+   			selectGroup[i] = document.createElement('select');
+   			selectGroup[i].setAttribute('class','form-control');
+   			divInputGroup[4 + i].appendChild(selectGroup[i]);
+   		}
+   		//是否今日菜式
+   		selectGroup[0].options.add(new Option('否','0'),0);
+   		selectGroup[0].options.add(new Option('是','1'),0);
+   		if(data.IsToday == 'true') selectGroup[0].options[0].selected = true;
+   		else selectGroup[0].options[1].selected = true;
+   		selectGroup[0].setAttribute('disabled','disabled');
+
+   		//菜式类型
+   		selectGroup[1].options.add(new Option('NormalDish','4'),0);
+   		selectGroup[1].options.add(new Option('SetMeal','3'),0);
+   		selectGroup[1].options.add(new Option('Soup','2'),0);
+   		selectGroup[1].options.add(new Option('Bread','1'),0);
+   		selectGroup[1].options.add(new Option('Dessert','0'),0);
+   		selectGroup[1].options[getDishTypeFromStrToInt(data.DishType)].selected = true;
+         
+   		//菜式口味
+   		selectGroup[2].options.add(new Option('Sour','3'),0);
+   		selectGroup[2].options.add(new Option('Perppery','2'),0);
+   		selectGroup[2].options.add(new Option('Salty','1'),0);
+   		selectGroup[2].options.add(new Option('Sweet','0'),0);
+
+   		selectGroup[2].options[getDishTasteFromStrToInt(data.Taste)].selected = true;
+
+   		//出售位置
+   		var positionDiv = document.createElement('div');
+   		divInputGroup[7].appendChild(positionDiv);
+
+   		var positionBtn = new Array();
+   		var positionBtnSpan = new Array();
+         if(data.Locations){
+            var locationsData = data.Locations.split(',');
+   		    for(var i = 0; i < locationsData.length; ++i){
+   		    	positionBtn[i] = document.createElement('button');
+   		    	positionBtn[i].setAttribute('class','btn btn-default');
+   		    	positionBtn[i].setAttribute('style','margin-left:10px');
+   		    	positionBtn[i].setAttribute('onclick','dishPosAndStuDelete(this)');
+   		    	positionBtn[i].innerHTML = locationsData[i];
+   		    	positionBtnSpan[i] = document.createElement('span');
+   		    	positionBtnSpan[i].setAttribute('class','glyphicon glyphicon-remove');
+   		    	positionBtn[i].appendChild(positionBtnSpan[i]);
+   		    	positionDiv.appendChild(positionBtn[i]);
+   		    }
+         }
+   		var positionBtnAdd = document.createElement('button');
+   		var positionBtnAddSpan = document.createElement('span');
+   		positionBtnAdd.setAttribute('class','btn btn-primary');
+   		positionBtnAdd.setAttribute('style','margin-left:10px');
+   		positionBtnAdd.setAttribute('onclick','dishPosAndStuAdd(this)');
+   		positionBtnAddSpan.setAttribute('class','glyphicon glyphicon-plus');
+   		positionBtnAdd.appendChild(positionBtnAddSpan);
+   		positionDiv.appendChild(positionBtnAdd);
+
+   		//菜式原料
+   		var stuffDiv = document.createElement('div');
+   		divInputGroup[8].appendChild(stuffDiv);
+
+   		var stuffBtn = new Array();
+   		var stuffBtnSpan = new Array();
+         if(data.RawStuff){
+            var rawStuffData = data.RawStuff.split(',');
+   		    for(var i = 0; i < rawStuffData.length; ++i){
+   		    	stuffBtn[i] = document.createElement('button');
+   		    	stuffBtn[i].setAttribute('class','btn btn-default');
+   		    	stuffBtn[i].setAttribute('style','margin-left:10px');
+   		    	stuffBtn[i].setAttribute('onclick','dishPosAndStuDelete(this)');
+   		    	stuffBtn[i].innerHTML = rawStuffData[i];
+   		    	stuffBtnSpan[i] = document.createElement('span');
+   		    	stuffBtnSpan[i].setAttribute('class','glyphicon glyphicon-remove');
+   		    	stuffBtn[i].appendChild(stuffBtnSpan[i]);
+   		    	stuffDiv.appendChild(stuffBtn[i]);
+   		    }
+         } 
+   		var stuffBtnAdd = document.createElement('button');
+   		var stuffBtnAddSpan =document.createElement('span');
+   		stuffBtnAdd.setAttribute('class','btn btn-primary');
+   		stuffBtnAdd.setAttribute('style','margin-left:10px')
+   		stuffBtnAdd.setAttribute('onclick','dishPosAndStuAdd(this)');
+   		stuffBtnAddSpan.setAttribute('class','glyphicon glyphicon-plus');
+   		stuffBtnAdd.appendChild(stuffBtnAddSpan);
+   		stuffDiv.appendChild(stuffBtnAdd);
+
+   		//菜式小图，图片功能不启用
+   		var dishSmImg = document.createElement('img');
+   		var smImageInput = document.createElement('input');
+   		dishSmImg.setAttribute('class','img-rounded');
+   		dishSmImg.setAttribute('src','');//启用src为data.DishSmallImage
+   		smImageInput.setAttribute('class','file');
+   		smImageInput.setAttribute('type','file');
+   		divInputGroup[9].appendChild(dishSmImg);
+   		divInputGroup[9].appendChild(smImageInput);
+
+   		//菜式大图,图片功能不启用
+   		var dishLgImg = document.createElement('img');
+   		var lgImageInput = document.createElement('input');
+   		dishLgImg.setAttribute('class','img-rounded');
+   		dishLgImg.setAttribute('src','');//启用src为data.DishLargeImage
+   		lgImageInput.setAttribute('class','file');
+   		lgImageInput.setAttribute('type','file');
+   		divInputGroup[10].appendChild(dishLgImg);
+   		divInputGroup[10].appendChild(lgImageInput);
+
+   		//描述
+   		var descLabel = document.createElement('label');
+   		var descText = document.createElement('textarea');
+   		descLabel.setAttribute('class','form-control');
+   		descLabel.innerHTML = '菜式描述'
+   		descText.setAttribute('class','form-control');
+   		descText.innerHTML = data.Description;
+   		liGroup[11].appendChild(descLabel);
+   		liGroup[11].appendChild(descText);
+
+   		//模态对话框的脚
+   		var modalFooter = document.createElement('div');
+   		modalFooter.setAttribute('class','modal-footer');
+   		modalContent.appendChild(modalFooter);
+
+   		//模态框 关闭按钮
+   		var modalCloseBtn = document.createElement('button');
+   		modalCloseBtn.setAttribute('type','button');
+   		modalCloseBtn.setAttribute('class','btn btn-default');
+   		modalCloseBtn.setAttribute('data-dismiss','modal');
+   		modalCloseBtn.innerHTML = '关闭';
+   		modalFooter.appendChild(modalCloseBtn);
+
+   		//模态框 提交按钮
+   		var modalSubmitBtn = document.createElement('button');
+   		modalSubmitBtn.setAttribute('type','button');
+   		modalSubmitBtn.setAttribute('class','btn btn-primary');
+   		modalSubmitBtn.setAttribute('onclick','dishUpdate(this)');
+   		modalSubmitBtn.innerHTML='提交更改';
+   		modalFooter.appendChild(modalSubmitBtn);
+
+   		//回到之前的按钮组，下拉按钮
+   		var dropdownBtn = document.createElement('button');
+   		dropdownBtn.setAttribute('type','button');
+   		dropdownBtn.setAttribute('class','btn btn-primary dropdown-toggle');
+   		dropdownBtn.setAttribute('data-toggle','dropdown');
+   		dropdownBtn.setAttribute('aria-expanded','false');
+   		divBtn_group.appendChild(dropdownBtn);
+
+   		//下拉按钮的图样
+   		var ddBtnSpan1 = document.createElement('span');
+   		var ddBtnSpan2 = document.createElement('span');
+   		ddBtnSpan1.setAttribute('class','caret');
+   		ddBtnSpan2.setAttribute('class','sr-only');
+   		ddBtnSpan2.innerHTML='Toggle Dropdown';
+   		dropdownBtn.appendChild(ddBtnSpan1);
+   		dropdownBtn.appendChild(ddBtnSpan2);
+
+   		//下拉菜单
+   		var ddList = document.createElement('ul');
+   		ddList.setAttribute('class','dropdown-menu');
+   		ddList.setAttribute('role','menu');
+   		divBtn_group.appendChild(ddList);
+
+   		//编辑&删除
+   		var ddEdit = document.createElement('li');
+   		var ddDelete = document.createElement('li');
+   		ddEdit.innerHTML = '<a href="javascript:void(0)" onclick="choseOperation(this)">Edit</a>';
+   		ddDelete.innerHTML = '<a href="javascript:void(0)" onclick="choseOperation(this)">Delete</a>';
+   		ddList.appendChild(ddEdit);
+   		ddList.appendChild(ddDelete);
+   	}
+
+
+   	//G删除今日菜式
+   	function deleteTodayDish(obj){
+   		var dishID = obj.parentNode.parentNode.childNodes[0].innerHTML;
+   		//向服务器发送删除的菜式ID
+   		//在得到服务器响应后删除菜式！！！！！！！！！！！！！！！！！！！！！！！
+   		var xmlhttp = new XMLHttpRequest();
+   		xmlhttp.onreadystatechange = function(){
+   			if (xmlhttp.readyState == 4 && xmlhttp.status == 200){
+   				var jsonData = JSON.parse(xmlhttp.responseText);
+   				if(jsonData.message == 'Modify Succeed!'){
+   					//重新加载今日菜式的页面
+                  setActive(1,'todayDishPageFlip');
+                  todayDishCurPage = 1;
+   					loadTodayDishPage(1);
+   				}
+   				else{
+   					alert(jsonData.message);
+   				}
+   			}
+   		}
+   		xmlhttp.open('POST','ym_dishes/adminOperateTodayDish/del',true);
+   		xmlhttp.setRequestHeader('content-type','application/x-www-form-urlencoded');
+   		var data = 'token=' + token +
+   			'&DishID=' + dishID;
+   		xmlhttp.send(data);
+   	}
+
+   	/*今日菜式的模版，参数是服务器发送过来的一个菜式的JSON对象。
+   	调用后直接在今日菜式表格中增加一行
+   	*/
+   	function todayDishTemplate(data){
+   		var tab = document.getElementById('todayDishTable');
+   		var newR = tab.insertRow(tab.rows.length);//新的一行
+   		var newDishID = newR.insertCell(0);
+   		var newDishName = newR.insertCell(1);
+   		var newDishTaste = newR.insertCell(2);
+   		var newDishType = newR.insertCell(3);
+   		var newDeleteBtn = newR.insertCell(4);
+
+   		newDishID.innerHTML = data.DishID;
+   		newDishName.innerHTML = data.DishName;
+   		newDishTaste.innerHTML = (data.Taste);
+   		newDishType.innerHTML = (data.DishType);
+   		newDeleteBtn.innerHTML = '<button class="btn btn-danger" onclick="deleteTodayDish(this)">删除</button>';
+   	}
+
+   	//TD获得用户评论
+   	function getUsrCommend(){
+   		var dishID = document.getElementById('usrCmdDishID').value;
+   		if(dishID != ''){
+            var xmlhttp = new XMLHttpRequest;
+   			checkDishID = dishID;
+            xmlhttp.onreadystatechange = function(){
+   			   if(xmlhttp.readyState == 4 && xmlhttp.status == 200){
+   			   	var jsonData = JSON.parse(xmlhttp.responseText);
+   			   	if(!jsonData.message){
+   			   		//加载用户评论成功
+   			   		//清空当前用户评论
+                     console.log(jsonData);
+   			   		document.getElementById('usrCommendTable').innerHTML = '';
+   			   		usrCmdCurPage = 1;
+                     if(jsonData.PageNum == '0'){
+                         maxUsrCmdPage = 1;
+                     }else{
+   			   		    maxUsrCmdPage = parseInt(jsonData.PageNum);
+                     }
+   			   		createUsrCmdPageFlip(maxUsrCmdPage);
+   			   		//加载页面内容
+   			   		loadUsrCmdPage(1);
+   			   	}
+   			   	else{
+   			   		alert(jsonData.message);
+   			   	}
+   			   }
+            }
+            xmlhttp.open('POST','ym_dish_comments/adminGetCommentList',true);
+            xmlhttp.setRequestHeader('content-type','application/x-www-form-urlencoded');
+            var data = 'token=' + token + 
+               '&DishID=' + dishID +
+               '&Page=' + 1;
+
+            xmlhttp.send(data);
+   		}
+   	}
+   	//删除用户评论
+   	function deleteUsrCommend(obj){
+   		var dishID = document.getElementById('usrCmdDishID').value;
+   		if(dishID != ''){
+            var xmlhttp = new XMLHttpRequest();
+   			var usr = obj.parentNode.childNodes[3].innerHTML;
+            xmlhttp.onreadystatechange = function(){
+               if (xmlhttp.readyState == 4 && xmlhttp.status == 200){
+                  var jsonData = JSON.parse(xmlhttp.responseText);
+                  if(jsonData.message == 'Delete Succeed!'){
+                     //删除用户评论
+                     obj.parentNode.outerHTML = '';
+                     setActive(1,'usrCmdPageFlip');
+                     usrCmdCurPage = 1;
+                     loadUsrCmdPage(1);
+                  }else{
+                     alert(jsonData.message);
+                  }
+               }
+            }
+            xmlhttp.open('POST','ym_dish_comments/adminDeleteComment',true);
+            xmlhttp.setRequestHeader('content-type','application/x-www-form-urlencoded');
+            var data = 'token=' + token +
+               '&DishID=' + dishID +
+               '&UserName=' + usr;
+            xmlhttp.send(data);
+   		}
+   		//向服务器发送删除请求
+
+   	}
+
+   	/*用户评论的模版，参数是服务器发送的json数组中的一个json对象！对象！
+	*/
+	function usrCommendTemplate(data){
+		var tab = document.getElementById('usrCommendTable');
+		var newLi = document.createElement('li');
+		newLi.setAttribute('class','list-group-item');
+		var newSpan = document.createElement('span');
+		newSpan.setAttribute('class','badge');
+		newSpan.setAttribute('style','cursor:pointer');
+		newSpan.setAttribute('onclick','deleteUsrCommend(this)');
+		newSpan.innerHTML = 'X';
+		var newH4 = document.createElement('h4');
+		newH4.innerHTML = data.NickName + '——' + data.Time;
+		var newP = document.createElement('p');
+		newP.innerHTML = data.Content;
+		var newPForUsr = document.createElement('p');
+		newPForUsr.setAttribute('style','display:none');
+		newPForUsr.innerHTML = data.UserName;
+		tab.appendChild(newLi);
+		newLi.appendChild(newSpan);
+		newLi.appendChild(newH4);
+		newLi.appendChild(newP);
+		newLi.appendChild(newPForUsr);
+	}
+   	/*
+	将枚举值换成对应的字符串，具体资料自己修改
+   	*/
+   	function getDishTypeFromStrToInt(data){
+   		if(data == 'Dessert')
+   			return 0;
+   		else if(data =='Bread')
+   			return 1;
+   		else if(data == 'Soup')
+   			return 2;
+   		else if(data == 'SetMeal')
+   			return 3;
+   		else if(data == 'NormalDish')
+   			return 4;
+   	}
+   	function getDishTypeFromIntToStr(data){
+   		if(data == 0)
+   			return 'Dessert';
+   		else if(data == 1)
+   			return 'Bread';
+   		else if(data == 2)
+   			return 'Soup';
+   		else if(data == 3)
+   			return 'SetMeal';
+   		else if(data == 4)
+   			return 'NormalDish';
+   	}
+   	function getDishTypeFromEnumToString(data){
+   		switch(data)
+   		{
+   			case '0':
+   				return '煎';
+   			case '1':
+   				return '炒';
+   			case '2':
+   				return '烹';
+   			case '3':
+   				return '炸';
+   		}
+   	}
+   	//同上
+   	function getDishTasteFromStrToInt(data){
+   		if(data == 'Sweet')
+   			return 0;
+   		else if(data =='Salty')
+   			return 1;
+   		else if(data == 'Perppery')
+   			return 2;
+   		else if(data == 'Sour')
+   			return 3;
+   	}
+   	function getDishTasteFromIntToStr(data){
+   		if(data == 0)
+   			return 'Sweet';
+   		else if(data == 1)
+   			return 'Salty';
+   		else if(data == 2)
+   			return 'Perppery';
+   		else if(data == 3)
+   			return 'Sour';
+   	}
+   	function getDishTasteFromEnumToString(data){
+   		switch(data){
+   			case '0':
+   				return '酸';
+   			case '1':
+   				return '甜';
+   			case '2':
+   				return '苦';
+   			case '3':
+   				return '辣';
+   		}
+   	}
+
+   	//在按下页面跳转的按钮的时候触发跳转页面
+   	function menuGotoPage(obj){
+   		
+   		if(obj.innerHTML == 'PREV'){
+   			//往前翻页
+   			if(menuCurPage == 1){
+   				return;
+   			}else{
+   				setActive(menuCurPage - 1,'menuPageFlip');
+   				menuCurPage -= 1;
+              
+   				loadMenuPage(menuCurPage);
+   			}
+   		}
+   		else if(obj.innerHTML == 'NEXT'){
+   			//往后翻页
+   			if(menuCurPage == maxMenuPage){
+   				return;
+   			}else{
+   				setActive(menuCurPage + 1,'menuPageFlip');
+   				menuCurPage += 1;
+
+   				loadMenuPage(menuCurPage);
+   			}
+   		}
+   		else{
+   			//随机跳转
+   			setActive(obj.innerHTML,'menuPageFlip');
+   			menuCurPage = parseInt(obj.innerHTML);
+
+   			loadMenuPage(menuCurPage);
+   		}
+
+   	}
+   	function todayDishGotoPage(obj){
+   		if(obj.innerHTML == 'PREV'){
+   			//往前翻页
+   			if(todayDishCurPage == 1){
+   				return;
+   			}else{
+   				setActive(todayDishCurPage - 1,'todayDishPageFlip');
+   				todayDishCurPage -= 1;
+   				loadTodayDishPage(todayDishCurPage);
+   			}
+   		}
+   		else if(obj.innerHTML == 'NEXT'){
+   			//往后翻页
+   			if(todayDishCurPage == maxTodayDishPage){
+   				return;
+   			}else{
+   				setActive(todayDishCurPage + 1,'todayDishPageFlip');
+   				todayDishCurPage += 1;
+   				loadTodayDishPage(todayDishCurPage);
+   			}
+   		}
+   		else{
+   			//随机跳转
+   			setActive(obj.innerHTML,'todayDishPageFlip');
+   			todayDishCurPage = parseInt(obj.innerHTML);
+   			loadTodayDishPage(todayDishCurPage);
+   		}
+   	}
+   	function usrCmdGotoPage(obj){
+   		//清空当前页面内容
+   		if(obj.innerHTML == 'PREV'){
+   			//往前翻页
+   			if(usrCmdCurPage == 1){
+   				return;
+   			}else{
+   				setActive(usrCmdCurPage - 1,'usrCmdPageFlip');
+   				usrCmdCurPage -= 1;
+   				loadUsrCmdPage(usrCmdCurPage);
+   			}
+   		}
+   		else if(obj.innerHTML == 'NEXT'){
+   			//往后翻页
+   			if(usrCmdCurPage == maxUsrCmdPage){
+   				return;
+   			}else{
+   				setActive(usrCmdCurPage + 1,'usrCmdPageFlip');
+   				usrCmdCurPage += 1;
+   				loadUsrCmdPage(usrCmdCurPage);
+   			}
+   		}
+   		else{
+   			//随机跳转
+   			setActive(obj.innerHTML,'usrCmdPageFlip');
+   			usrCmdCurPage = parseInt(obj.innerHTML);
+   			loadUsrCmdPage(usrCmdCurPage);
+   		}
+   	}
+   	//T获得页数并加载页面，参数是目标页面,同时会更新最大页面数量以及页面导航栏
+   	function loadMenuPage(num){
+   		var xmlhttp = new XMLHttpRequest();
+   		xmlhttp.onreadystatechange = function(){
+   			if(xmlhttp.readyState == 4 && xmlhttp.status == 200){
+   				var jsonData = JSON.parse(xmlhttp.responseText);
+   				if(jsonData.message){
+   					alert(jsonData.message);
+   				}
+   				else{
+   					//清空当前页面
+   					document.getElementById('menuTable').childNodes[3].innerHTML = '<tr></tr>';
+   					if(maxMenuPage != jsonData.PageNum){
+   						maxMenuPage = jsonData.PageNum;
+   						createMenuPageFlip(maxMenuPage);
+   						setActive(menuCurPage,'menuPageFlip');
+   					}
+   					//从新加载
+                  var dishInfo = JSON.parse(jsonData.Dish_List);
+   					for(var i = 0; i < dishInfo.length; ++i){
+   						menuTemplate(dishInfo[i],i);
+   					}
+   				}
+   			}
+   		}
+   		xmlhttp.open("POST","ym_dishes/adminGetFoodList",true);
+   		xmlhttp.setRequestHeader('content-type','application/x-www-form-urlencoded');
+   		var data = 'token=' + token +
+   			'&Page=' + num;
+   		xmlhttp.send(data);
+   	}
+   	function loadTodayDishPage(num){
+   		var xmlhttp = new XMLHttpRequest();
+   		xmlhttp.onreadystatechange = function(){
+   			if(xmlhttp.readyState == 4 && xmlhttp.status == 200){
+   				var jsonData = JSON.parse(xmlhttp.responseText);
+   				if(jsonData.message){
+   					alert(jsonData.message)
+   				}else{
+   					//清空今日菜式页面
+   					document.getElementById('todayDishTable').childNodes[3].innerHTML ='<tr></tr>';
+   					if(maxTodayDishPage != jsonData.PageNum){
+   						createTodayDishPageFlip(jsonData.PageNum);
+   						setActive(todayDishCurPage,'todayDishPageFlip');
+   						maxTodayDishPage = jsonData.PageNum;
+   					}
+   					//重新加载
+                  var dishInfo = JSON.parse(jsonData.Dish_List);
+   					for(var i = 0; i < dishInfo.length; ++i){
+   						todayDishTemplate(dishInfo[i]);
+   					}
+   				}
+   			}
+   		}
+   		xmlhttp.open("POST","ym_dishes/getTodayFoodList",true);
+   		xmlhttp.setRequestHeader('content-type','application/x-www-form-urlencoded');
+   		var data = 'token=' + token + 
+   			'&Page=' + num;
+   		xmlhttp.send(data);
+   	}
+   	function loadUsrCmdPage(num){
+   		var xmlhttp = new XMLHttpRequest();
+   		xmlhttp.onreadystatechange = function(){
+   			if(xmlhttp.readyState == 4 && xmlhttp.status == 200){
+   				var jsonData = JSON.parse(xmlhttp.responseText);
+   				if(jsonData.message){
+   					alert(jsonData.message);
+   				}
+   				else{
+   					//清空页面
+   					document.getElementById('usrCommendTable').innerHTML ='';
+   					if(maxUsrCmdPage != jsonData.PageNum){
+                     if(jsonData.PageNum == '0'){
+                        maxUsrCmdPage = 1;
+                     }
+                     else{
+                        maxUsrCmdPage = parseInt(jsonData.PageNum);
+                     }
+   						createUsrCmdPageFlip(jsonData.PageNum);
+   						setActive(usrCmdCurPage,'usrCmdPageFlip');
+   					}
+   					//重新加载
+                  var dishInfo = JSON.parse(jsonData.Comment_List);
+   					for(var i = 0; i < dishInfo.length; ++i){
+   						usrCommendTemplate(dishInfo[i]);
+   					}
+   				}
+   			}
+   		}
+   		xmlhttp.open('POST','ym_dish_comments/adminGetCommentList',true);
+   		xmlhttp.setRequestHeader('content-type','application/x-www-form-urlencoded');
+   		var data = 'token=' + token +
+   			'&Page=' + num + 
+   			'&DishID=' + checkDishID;
+   		xmlhttp.send(data);
+   	}
+   	//产生翻页条，参数是页面总数
+   	function createMenuPageFlip(num){
+   		var pag = document.getElementById('menuPageFlip');
+   		pag.innerHTML = '';
+   		var prev = document.createElement('li');
+   		var pa = document.createElement('a');
+   		pa.setAttribute('href','javascript:void(0)');
+   		pa.setAttribute('onclick','menuGotoPage(this)');
+   		pa.innerHTML = 'PREV';
+   		prev.appendChild(pa);
+   		pag.appendChild(prev);
+   		var first = document.createElement('li');
+   		var fa = document.createElement('a');
+   		fa.setAttribute('href','javascript:void(0)');
+   		fa.setAttribute('onclick','menuGotoPage(this)');
+   		fa.innerHTML = '1';
+   		first.setAttribute('class','active');
+   		first.appendChild(fa);
+   		pag.appendChild(first);
+   		for(var i = 2; i <= num; ++i){
+   			var li = document.createElement('li');
+   			var a = document.createElement('a');
+   			a.setAttribute('href','javascript:void(0)');
+   			a.setAttribute('onclick','menuGotoPage(this)');
+   			a.innerHTML = i;
+   			li.appendChild(a);
+   			pag.appendChild(li);
+   		}
+   		var next = document.createElement('li');
+   		var na = document.createElement('a');
+   		na.setAttribute('href','javascript:void(0)');
+   		na.setAttribute('onclick','menuGotoPage(this)');
+   		na.innerHTML = 'NEXT';
+   		next.appendChild(na);
+   		pag.appendChild(next);
+   	}
+   	function createTodayDishPageFlip(num){
+   		var pag = document.getElementById('todayDishPageFlip');
+   		pag.innerHTML = '';
+   		var prev = document.createElement('li');
+   		var pa = document.createElement('a');
+   		pa.setAttribute('href','javascript:void(0)');
+   		pa.setAttribute('onclick','todayDishGotoPage(this)');
+   		pa.innerHTML = 'PREV';
+   		prev.appendChild(pa);
+   		pag.appendChild(prev);
+   		var first = document.createElement('li');
+   		var fa = document.createElement('a');
+   		fa.setAttribute('href','javascript:void(0)');
+   		fa.setAttribute('onclick','todayDishGotoPage(this)');
+   		fa.innerHTML = '1';
+   		first.setAttribute('class','active');
+   		first.appendChild(fa);
+   		pag.appendChild(first);
+   		for(var i = 2; i <= num; ++i){
+   			var li = document.createElement('li');
+   			var a = document.createElement('a');
+   			a.setAttribute('href','javascript:void(0)');
+   			a.setAttribute('onclick','todayDishGotoPage(this)');
+   			a.innerHTML = i;
+   			li.appendChild(a);
+   			pag.appendChild(li);
+   		}
+   		var next = document.createElement('li');
+   		var na = document.createElement('a');
+   		na.setAttribute('href','javascript:void(0)');
+   		na.setAttribute('onclick','todayDishGotoPage(this)');
+   		na.innerHTML = 'NEXT';
+   		next.appendChild(na);
+   		pag.appendChild(next);   		
+   	}
+   	function createUsrCmdPageFlip(num){
+
+   		var pag = document.getElementById('usrCmdPageFlip');
+   		pag.innerHTML = '';
+   		var prev = document.createElement('li');
+   		var pa = document.createElement('a');
+   		pa.setAttribute('href','javascript:void(0)');
+   		pa.setAttribute('onclick','usrCmdGotoPage(this)');
+   		pa.innerHTML = 'PREV';
+   		prev.appendChild(pa);
+   		pag.appendChild(prev);
+   		var first = document.createElement('li');
+   		var fa = document.createElement('a');
+   		fa.setAttribute('href','javascript:void(0)');
+   		fa.setAttribute('onclick','usrCmdGotoPage(this)');
+   		fa.innerHTML = '1';
+   		first.setAttribute('class','active');
+   		first.appendChild(fa);
+   		pag.appendChild(first);
+   		for(var i = 2; i <= num; ++i){
+   			var li = document.createElement('li');
+   			var a = document.createElement('a');
+   			a.setAttribute('href','javascript:void(0)');
+   			a.setAttribute('onclick','usrCmdGotoPage(this)');
+   			a.innerHTML = i;
+   			li.appendChild(a);
+   			pag.appendChild(li);
+   		}
+   		var next = document.createElement('li');
+   		var na = document.createElement('a');
+   		na.setAttribute('href','javascript:void(0)');
+   		na.setAttribute('onclick','usrCmdGotoPage(this)');
+   		na.innerHTML = 'NEXT';
+   		next.appendChild(na);
+   		pag.appendChild(next);
+   	}
+   	//设置翻页条的active,在调用之前当前所处的页面位置menuCurPage和todayDishCurPage不能改变，参数是目标页面以及目标页面跳转条的id
+   	function setActive(num,id){
+   		var tab = document.getElementById(id);
+   		var curPage = 0;
+   		if(id == 'menuPageFlip'){
+   			curPage = menuCurPage;
+   		}
+   		else if(id == 'todayDishPageFlip'){
+   			curPage = todayDishCurPage;
+   		}
+         else if(id == 'usrCmdPageFlip'){
+            curPage = usrCmdCurPage;
+         }
+   		var last = tab.childNodes[curPage];//当前激活的a
+   		last.setAttribute('class','unactive');
+   		var now = tab.childNodes[num];//即将要激活的a
+   		now.setAttribute('class','active');
+   	}
+   	/*
+   	function loadTest(){
+   		var data = {
+   			'DishID':'01',
+   			'DishType':'1',
+   			'DishName':'垃圾',
+   			'DishSmallImage':'tt.jpg',
+   			'DishLargeImage':'tt.jpg',
+   			'Taste':'2',
+   			'RawStuff':['米饭','垃圾'],
+   			'Locations':['一楼','二楼'],
+   			'Description':'描述',
+   			'Price':'100',
+   			'Like':'100',
+   			'Favorite':'2',
+   			'IsToday':'false',
+   		};
+
+   		var usrCmd ={
+   			'NickName':'Jack',
+   			'Time':'2016/11/21',
+   			'Content':'你傻掉',
+   			'UserName':'杨永信',
+   		}
+   		menuTemplate(data,2);
+   		todayDishTemplate(data);
+   		usrCommendTemplate(usrCmd);
+   	}
+   	*/
+   	function loadTest(){
+   		document.getElementById('loginPage').setAttribute('style','display:block');
+   		document.getElementById('mainPage').setAttribute('style','display:none');
+   	}
+
+   	function login(){
+   		var usn = document.getElementById('usn').value;
+   		var pwd = document.getElementById('pwd').value;
+   		var xmlhttp = new XMLHttpRequest();
+		xmlhttp.onreadystatechange = function()
+		{
+			if(xmlhttp.readyState == 4 && xmlhttp.status == 200)
+			{
+				var jsonData = JSON.parse(xmlhttp.responseText);
+				if(jsonData.message == "Login Success!"){
+					//成功登录,保存TOKEN
+					token = jsonData.token;
+					document.getElementById('loginPage').setAttribute('style','display:none');
+   				document.getElementById('mainPage').setAttribute('style','display:block');
+               loadMenuPage(1);
+               loadTodayDishPage(1);
+				}
+				else{
+					//登录失败
+					alert('帐号或密码错误');
+				}
+	
+			}
+		}
+		xmlhttp.open('POST','users/adminLogin',true);
+      	xmlhttp.setRequestHeader('content-type','application/x-www-form-urlencoded');
+      	var data = 'AdminName=' + usn + '&' + 'Password=' + pwd;
+      	xmlhttp.send(data);
+   }
+   </script>
+
+</head>
+<body style="background-color:#f5f5f5;" onload="loadTest()">
+<div class="container" style="margin-top:5%;border-style:solid;border-width:1px;border-color:#888888;box-shadow:2px 2px #bbbbbb;border-radius:10px;padding:20px;" id="mainPage">
+	<div class="row clearfix" >
+		<div class="col-md-4">
+			<ul class="nav nav-tabs nav-justified">
+  				<li class="active"><a href="javascript:void(0)" onclick="switchPage(this)">菜单</a></li>
+  				<li><a href="javascript:void(0)" onclick="switchPage(this)">今日菜式</a></li>
+  				<li><a href="javascript:void(0)" onclick="switchPage(this)">用户评论</a></li>
+			</ul>
+		</div>
+	</div>
+	<div class="row clearfix" style="border-style:solid;border-width:1px;border-radius:10px;border-color:#888888;display:block;" id="menu" >
+		<div class="col-md-12">
+			<table class="table" id="menuTable" style="width:100%">
+				<thead>
+					<th>
+						菜式ID
+					</th>
+					<th>
+						菜式名称
+					</th>
+					<th>
+						菜式类型
+					</th>
+					<th>
+						菜式口味
+					</th>
+					<th>
+						今日菜式
+					</th>
+					<th>
+						操作
+					</th>
+				</thead>
+				<tbody>
+					<tr></tr>
+				</tbody>
+			</table>
+			<div class="input-group">
+				<button class="btn btn-primary" data-toggle="modal" data-target="#addDishInfo">增加菜式</button>
+				<div class="modal fade" id="addDishInfo" tabindex="-1" role="dialog" aria-labelledby="DishmyModalLabel" aria-hidden="true"> 
+				    <div class="modal-dialog"> 
+				        <div class="modal-content"> 
+				            <div class="modal-header"> 
+				                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button> 
+				                <h4 class="modal-title" id="DishmyModalLabel">增加菜式</h4> 
+				            </div> 
+				            <div class="modal-body">
+				            	<ul class="list-group">
+									<li class="list-group-item">
+										<div class="input-group">
+											<span class="input-group-addon">菜式ID</span>
+											<input type="text" class="form-control" id="newDishID">
+										</div>
+									</li>
+									<li class="list-group-item">
+										<div class="input-group">
+											<span class="input-group-addon">菜式名称</span>
+											<input type="text" class="form-control" id="newDishName">
+										</div>
+									</li>
+									<li class="list-group-item">
+										<div class="input-group">
+											<span class="input-group-addon">菜式价格</span>
+											<input type="text" class="form-control" id="newDishPrice">
+										</div>					
+									</li>												
+									<li class="list-group-item">
+										<div class="input-group">
+											<span class="input-group-addon">菜式类型</span>
+											<select class="form-control" id="newDishType">
+												<option value="0">Dessert</option>
+												<option value="1">Bread</option>
+												<option value="2">Soup</option>
+												<option value="3">SetMeal</option>
+												<option value="4">NormalDish</option>
+											</select>
+											
+										</div>
+									</li>
+									<li class="list-group-item">
+										<div class="input-group">
+											<span class="input-group-addon">菜式口味</span>
+											<select class="form-control" id="newDishTaste">
+												<option value="0">Sweet</option>
+												<option value="1">Salty</option>
+												<option value="2">Perppery</option>
+												<option value="3">Sour</option>
+											</select>
+										</div>
+									</li>												
+									<li class="list-group-item">
+										<div class="input-group">
+											<span class="input-group-addon">出售位置</span>
+               									<div id="newDishLocations">
+               									   <button class="btn btn-primary" style="margin-left:10px" onclick="dishPosAndStuAdd(this)"><span class="glyphicon glyphicon-plus"></span></button>
+               									</div>
+               							</div>
+									</li>
+									<li class="list-group-item">
+											<div class="input-group">
+												<span class="input-group-addon">菜式原料</span>
+               									<div id="newDishStuff">
+               									   <button class="btn btn-primary" style="margin-left:10px" onclick="dishPosAndStuAdd(this)"><span class="glyphicon glyphicon-plus"></span></button>
+               									</div>
+               								</div>
+									</li>
+									<li class="list-group-item">
+										<div class="input-group">
+											<span class="input-group-addon">菜式小图</span>
+											<img src="" class="img-rounded">
+											<input type="file"  class="file" id="newDishSmImg">
+										</div>
+									</li>
+									<li class="list-group-item">
+										<div class="input-group">
+											<span class="input-group-addon">菜式大图</span>
+											<img src="" class="img-rounded">
+											<input type="file" class="file" id="newDishLgImg">
+										</div>
+									</li>
+									<li class="list-group-item">
+										<label>菜式描述</label>
+										<textarea style="margin-right:10px;width:100%" id="newDishDesc"></textarea>
+										
+									</li>
+								</ul>
+				            </div> 
+				            <div class="modal-footer"> 
+				                <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button> 
+				                <button type="button" class="btn btn-primary" data-dismiss='modal' onclick="addDish(this)">提交</button> 
+				            </div> 
+				        </div><!-- /.modal-content --> 
+				    </div><!-- /.modal --> 
+				</div>
+			</div>
+			<ul class="pagination" id="menuPageFlip">
+			</ul>
+		</div>
+	</div>
+	<div class="row clearfix" style="border-style:solid;border-width:1px;border-radius:10px;border-color:#888888;display:none" id="todayDish" >
+		<div class="col-md-12">
+			<table class="table" id="todayDishTable">
+				<thead>
+					<th>
+						菜式ID
+					</th>
+					<th>
+						菜式名称
+					</th>
+					<th>
+						菜式口味
+					</th>
+					<th>
+						菜式类型
+					</th>
+				</thead>
+				<tbody>
+					<tr></tr>
+				</tbody>
+			</table>
+			<ul class="pagination" id="todayDishPageFlip">
+			</ul>
+		</div>
+	</div>
+	<div class="row clearfix" style="border-style:solid;border-width:1px;border-radius:10px;border-color:#888888;display:none" id="commend">
+		<div class="col-md-12">
+			<div class="input-group col-md-3 col-md-offset-4 col-sm-3 col-sm-offset-4 col-xs-6 col-xs-offset-3" style="margin-top:10px">
+				<input type="text" class="form-control" placeholder="菜式ID" id="usrCmdDishID">
+				<span class="input-group-btn">
+					<button class="btn btn-primary" onclick="getUsrCommend()">查询</button>
+				</span>
+			</div>
+			<ul class="list-group" style="margin-top:10px" id="usrCommendTable">
+			</ul>
+			<ul class="pagination" id="usrCmdPageFlip">
+			</ul>
+		</div>
+	</div>
 </div>
+<div class="container" id="loginPage">
+	<div class="row clearfix" style="margin-top:10%;">
+
+		<div class="col-xs-6 col-xs-offset-3 col-sm-4 col-sm-offset-4 col-md-4 col-md-offset-4 col-lg-4 col-lg-offset-4" style="border-style:solid;border-width:1px;border-radius:10px;border-color:#888888;box-shadow:2px 2px #bbbbbb;">
+			<h2 class="text-center">
+				Welcome!
+			</h2>
+			<form class="form-horizontal" role="form">
+				<div class="form-group">
+					<div class="col-sm-12">
+						<input type="text" class="form-control" id="usn" placeholder="UserName" />
+					</div>
+				</div>
+				<div class="form-group">
+					<div class="col-sm-12">
+						<input type="password" class="form-control" id="pwd" placeholder="Password" />
+					</div>
+				</div>
+				<div class="form-group">
+					<div class="col-sm-offset-0 col-sm-10">
+						<div class="checkbox">
+							 <label><input type="checkbox" />Remember me</label>
+						</div>
+					</div>
+				</div>
+				<div class="form-group">
+					<div class="col-sm-12">
+						 <button type="button" class="btn btn-block btn-primary" onclick="login()">log in</button>
+					</div>
+				</div>
+			</form>
+		</div>
+
+	</div>
 </div>
-<p id="data">data</p>
-{% endblock %}
+
+</body>
+</html>
