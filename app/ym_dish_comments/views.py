@@ -42,7 +42,7 @@ def GetCommentList():
 		comments=YMDishComment.query.filter(YMDishComment.DishID==request.values.get('DishID')).paginate(i_page,PER_PAGE,False).items
 		PageNum=YMDishComment.query.filter(YMDishComment.DishID==request.values.get('DishID')).paginate(i_page,PER_PAGE,False).pages
 		
-		if len(comments) == 0:
+		if len(comments) == 0 and i_page>1:
 			return json.dumps({'message':'Page is out of range!'})
 
 		for one in comments:
@@ -51,7 +51,7 @@ def GetCommentList():
 						,'NickName':User.query.filter(User.UserName==one.UserName).first().NickName})
 		return json.dumps({'CurrentPage':str(i_page)
 						,'PageNum':str(PageNum)
-						,'comment_list':json.dumps(List)})
+						,'Comment_List':json.dumps(List)})
 
 @mod.route('/adminGetCommentList',methods=('GET', 'POST'))
 def adminGetCommentList():
@@ -59,7 +59,7 @@ def adminGetCommentList():
 		return json.dumps({'message':'Please use method POST!'})
 	if request.method=='POST':
 		List=[]
-		page=request.values.get('page')
+		page=request.values.get('Page')
 		if page is None:
 			i_page=1
 		else:
@@ -74,7 +74,7 @@ def adminGetCommentList():
 		comments=YMDishComment.query.filter(YMDishComment.DishID==request.values.get('DishID')).paginate(i_page,PER_PAGE,False).items
 		PageNum=YMDishComment.query.filter(YMDishComment.DishID==request.values.get('DishID')).paginate(i_page,PER_PAGE,False).pages
 		
-		if len(comments) == 0:
+		if len(comments) == 0 and i_page>1:
 			return json.dumps({'message':'Page is out of range!'})
 
 		for one in comments:
@@ -84,7 +84,7 @@ def adminGetCommentList():
 						,'UserName':one.UserName})
 		return json.dumps({'CurrentPage':str(i_page)
 						,'PageNum':str(PageNum)
-						,'comment_list':json.dumps(List)})
+						,'Comment_List':json.dumps(List)})
 
 @mod.route('/adminDeleteComment',methods=['GET','POST'])
 def adminDeleteComment():

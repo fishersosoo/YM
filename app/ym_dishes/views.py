@@ -20,6 +20,9 @@ from app.ym_dishes.models import YMDish
 
 mod=Blueprint('ym_dishes',__name__)
 
+def test(obj):
+	print obj
+
 @mod.route('/adminGetFoodList',methods=['GET','POST'])
 def adminGetFoodList():
 	if request.method == 'GET':
@@ -36,14 +39,14 @@ def adminGetFoodList():
 		
 		# get foodlist
 		List=[]
-		page = request.values.get('page')
+		page = request.values.get('Page')
 		if page is None:
 			i_page=1
 		else:
 			i_page=int(page)
 		FoodList=YMDish.query.paginate(i_page,PER_PAGE,False).items
 		PageNum=YMDish.query.paginate(i_page,PER_PAGE,False).pages
-		if len(FoodList)==0:
+		if len(FoodList)==0 and i_page>1:
 			return json.dumps({'message':'Page is out of range!'})
 		for one in FoodList:
 			List.append({'DishID':one.DishID
@@ -172,7 +175,7 @@ def GetTodayDish():
 		return json.dumps({'message':'Please use method POST!'})
 	if request.method=='POST':
 		List=[]
-		page=request.values.get('page')
+		page=request.values.get('Page')
 		if page is None:
 			i_page=1
 		else:
@@ -180,7 +183,7 @@ def GetTodayDish():
 
 		FoodList=YMDish.query.filter(YMDish.IsToday==True).paginate(i_page,PER_PAGE,False).items
 		PageNum=YMDish.query.filter(YMDish.IsToday==True).paginate(i_page,PER_PAGE,False).pages
-		if len(FoodList) == 0:
+		if len(FoodList) == 0 and i_page>1:
 			return json.dumps({'message':'Page is out of range!'})
 		for one in FoodList:
 			List.append({'DishID':one.DishID
